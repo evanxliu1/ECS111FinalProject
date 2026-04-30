@@ -1,0 +1,23 @@
+name: both
+encoder: microsoft/deberta-v3-base
+max_len: 256
+
+losses:
+  ce: 1.0
+  contrastive: 0.5
+  adversarial: 0.3
+
+projection_dim: 256
+num_generators: 4
+
+train:
+  epochs: 3
+  batch_size: 16
+  grad_accum: 2
+  lr_encoder: 2.0e-5
+  lr_heads: 1.0e-3
+  warmup_ratio: 0.1
+  weight_decay: 0.01
+  fp16: true
+  eval_every: 200
+  seed: 42
