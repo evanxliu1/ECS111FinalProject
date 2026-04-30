@@ -10,15 +10,21 @@ from pathlib import Path
 import pandas as pd
 import torch
 from tqdm import tqdm
-from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+from transformers import (
+    AutoConfig,
+    AutoModelForCausalLM,
+    AutoModelForImageTextToText,
+    AutoTokenizer,
+    BitsAndBytesConfig,
+)
 
 from src.data.prompts import build_prompt, sample_word_count
 
 # Generator slot -> default HF model id. Override on command line if needed.
 GENERATOR_MODELS = {
-    "granite": "ibm-granite/granite-4.1-8b",
-    "gemma": "google/gemma-4-E4B-it",
-    "qwen": "Qwen/Qwen3.6-7B-Instruct",   # placeholder small variant; confirm exact id
+    "granite": "ibm-granite/granite-4.1-8b",         # pure text, Apache-2.0
+    "gemma": "google/gemma-4-E4B-it",                 # multimodal; we use text-only
+    "qwen": "Qwen/Qwen2.5-7B-Instruct",               # pure text, Apache-2.0
 }
 
 
@@ -39,7 +45,14 @@ def _load_model(hf_id: str, four_bit: bool = True):
             bnb_4bit_quant_type="nf4",
             bnb_4bit_use_double_quant=True,
         )
-    model = AutoModelForCausalLM.from_pretrained(hf_id, **kwargs)
+
+    # Pick the right model class based on architecture (multimodal vs causal-LM)
+    cfg = AutoConfig.from_pretrained(hf_id, trust_remote_code=True)
+    arch_str = " ".join(getattr(cfg, "architectures", []) or []).lower()
+    if "imagetexttotext" in arch_str or "vision" in arch_str or hasattr(cfg, "vision_config"):
+        model = AutoModelForImageTextToText.from_pretrained(hf_id, **kwargs)
+    else:
+        model = AutoModelForCausalLM.from_pretrained(hf_id, **kwargs)
     model.eval()
     return tok, model
 
