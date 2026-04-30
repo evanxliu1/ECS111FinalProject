@@ -1,18 +1,21 @@
 """Load and filter Amazon Reviews 2023 to build the human review pool.
 
-Filters reviews to before ChatGPT's public release (2022-11-30) to ensure
-the human pool is genuinely human-written.
+The McAuley-Lab/Amazon-Reviews-2023 HF dataset uses a deprecated loading script,
+so we stream the underlying JSONL files directly from HF over HTTP and parse
+line-by-line, filtering as we go. This avoids downloading entire multi-GB files.
+
+Filters reviews to before ChatGPT's public release (2022-11-30).
 """
 import argparse
-import os
+import json
 from pathlib import Path
 
 import pandas as pd
-from datasets import load_dataset
+import requests
 from tqdm import tqdm
 
-# Cutoff: ChatGPT public release was 2022-11-30
-PRE_CHATGPT_CUTOFF_MS = 1669766400000  # 2022-11-30 00:00:00 UTC in ms
+# 2022-11-30 00:00:00 UTC in milliseconds — ChatGPT public release
+PRE_CHATGPT_CUTOFF_MS = 1669766400000
 
 CATEGORIES = [
     "All_Beauty",
@@ -28,40 +31,51 @@ CATEGORIES = [
 MIN_WORDS = 20
 MAX_WORDS = 400
 
+HF_BASE = (
+    "https://huggingface.co/datasets/McAuley-Lab/Amazon-Reviews-2023/"
+    "resolve/main/raw/review_categories"
+)
 
-def _stream_category(category: str, target_n: int, seed: int) -> list[dict]:
-    """Stream a category, filter by date and length, return up to target_n rows."""
-    ds = load_dataset(
-        "McAuley-Lab/Amazon-Reviews-2023",
-        f"raw_review_{category}",
-        split="full",
-        streaming=True,
-        trust_remote_code=True,
-    )
-    ds = ds.shuffle(seed=seed, buffer_size=10_000)
 
-    rows = []
-    for ex in tqdm(ds, desc=category, total=target_n * 4):
-        ts = ex.get("timestamp")
-        text = ex.get("text") or ""
-        if not ts or ts >= PRE_CHATGPT_CUTOFF_MS:
-            continue
-        wc = len(text.split())
-        if wc < MIN_WORDS or wc > MAX_WORDS:
-            continue
-        rows.append({
-            "review_id": f"{category}_{ex.get('user_id', '')}_{ts}",
-            "category": category,
-            "parent_asin": ex.get("parent_asin"),
-            "rating": ex.get("rating"),
-            "title": ex.get("title"),
-            "text": text,
-            "timestamp": ts,
-            "label": 0,        # 0 = human, 1 = AI
-            "generator": "human",
-        })
-        if len(rows) >= target_n:
-            break
+def _stream_category(category: str, target_n: int) -> list[dict]:
+    """HTTP-stream a category's JSONL, filter, return up to target_n rows."""
+    url = f"{HF_BASE}/{category}.jsonl"
+    rows: list[dict] = []
+
+    with requests.get(url, stream=True, timeout=60) as resp:
+        resp.raise_for_status()
+        pbar = tqdm(desc=category, total=target_n, unit="rev")
+        for line in resp.iter_lines(decode_unicode=True):
+            if not line:
+                continue
+            try:
+                ex = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+
+            ts = ex.get("timestamp")
+            text = ex.get("text") or ""
+            if not ts or ts >= PRE_CHATGPT_CUTOFF_MS:
+                continue
+            wc = len(text.split())
+            if wc < MIN_WORDS or wc > MAX_WORDS:
+                continue
+
+            rows.append({
+                "review_id": f"{category}_{ex.get('user_id', '')}_{ts}",
+                "category": category,
+                "parent_asin": ex.get("parent_asin"),
+                "rating": ex.get("rating"),
+                "title": ex.get("title"),
+                "text": text,
+                "timestamp": ts,
+                "label": 0,
+                "generator": "human",
+            })
+            pbar.update(1)
+            if len(rows) >= target_n:
+                break
+        pbar.close()
     return rows
 
 
@@ -76,14 +90,18 @@ def build_human_pool(
     all_rows: list[dict] = []
     for i, cat in enumerate(CATEGORIES):
         target = per_cat + (1 if i < extra else 0)
-        all_rows.extend(_stream_category(cat, target, seed + i))
+        all_rows.extend(_stream_category(cat, target))
 
     df = pd.DataFrame(all_rows)
-    df = df.drop_duplicates(subset="review_id").sample(frac=1, random_state=seed).reset_index(drop=True)
+    df = (
+        df.drop_duplicates(subset="review_id")
+        .sample(frac=1, random_state=seed)
+        .reset_index(drop=True)
+    )
 
     Path(out_path).parent.mkdir(parents=True, exist_ok=True)
     df.to_parquet(out_path, index=False)
-    print(f"Saved {len(df)} human reviews to {out_path}")
+    print(f"\nSaved {len(df)} human reviews to {out_path}")
     return df
 
 
@@ -92,16 +110,15 @@ def main() -> None:
     p.add_argument("--n", type=int, default=10_000)
     p.add_argument("--seed", type=int, default=42)
     p.add_argument("--out", type=str, default="data/raw/human_reviews.parquet")
-    p.add_argument("--limit", type=int, default=None, help="Smoke test: load this many total only")
+    p.add_argument("--limit", type=int, default=None, help="Smoke test override")
     args = p.parse_args()
 
     n = args.limit if args.limit else args.n
     df = build_human_pool(n_total=n, seed=args.seed, out_path=args.out)
     print(df.head())
     print(f"\nCategory counts:\n{df['category'].value_counts()}")
-    print(f"\nWord count stats: min={df['text'].str.split().str.len().min()}, "
-          f"max={df['text'].str.split().str.len().max()}, "
-          f"mean={df['text'].str.split().str.len().mean():.1f}")
+    wc = df["text"].str.split().str.len()
+    print(f"\nWord count: min={wc.min()}, max={wc.max()}, mean={wc.mean():.1f}")
 
 
 if __name__ == "__main__":
