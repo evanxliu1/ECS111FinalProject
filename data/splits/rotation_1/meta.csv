@@ -1,0 +1,2 @@
+rotation,held_out,train_gens,n_train,n_val,n_test_indist,n_test_crossgen_ai,n_test_crossgen_human
+1,deepseek,"gpt5mini,gemma,qwen",11980,1496,1500,2499,2481

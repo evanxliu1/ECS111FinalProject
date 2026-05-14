@@ -20,8 +20,12 @@ and no `requirements.txt`; each notebook installs exactly what it needs.
 
 Run `notebooks/00_setup.ipynb` first, once per Colab session. It mounts Google
 Drive and clones (or pulls) this repo into `MyDrive/ECS111FinalProject`, so code
-and data sit together in one folder. Edit and `git push` code from your laptop;
-re-run `00_setup` in Colab to `git pull` the latest.
+and data sit together in one folder.
+
+**Workflow:** edit and commit notebooks from your **laptop**, then `git push`.
+In **Colab**, treat the repo as read-only — just re-run `00_setup` to `git pull`
+the latest. Colab auto-commits every save ("Created using Colab"), so editing
+notebooks there will fork history; don't.
 
 ## Pipeline status
 
@@ -30,15 +34,49 @@ re-run `00_setup` in Colab to `git pull` the latest.
 | Notebook | What it does |
 |---|---|
 | `00_setup.ipynb` | Mounts Drive, clones/pulls the repo into Drive. Run once per session. |
-| `01_collect_human_reviews.ipynb` | Streams the McAuley-Lab **Amazon Reviews 2023** dataset from HuggingFace, filters to **pre-2022-11-30** reviews (before ChatGPT's public release, so confidently human) of 20–400 words, and reservoir-samples **10,000** reviews evenly across 8 product categories. Per-category checkpoints make it resumable. Output: `data/raw/human_reviews.csv`. |
+| `01_collect_human_reviews.ipynb` | Streams the McAuley-Lab **Amazon Reviews 2023** dataset from HuggingFace, filters to **pre-2022-11-30** reviews (before ChatGPT's public release, so confidently human) of 20–400 words, **English only** (`langdetect`), and reservoir-samples ~10,000 reviews evenly across 8 product categories. Per-category checkpoints make it resumable. Output: `data/raw/human_reviews.csv`. |
 | `01b_generate_gpt5mini.ipynb` | Samples 2,500 products from the human pool and prompts **GPT-5 mini** (OpenAI API) to write a customer-style review for each, with target lengths drawn from the human length distribution. Parallel, resume-safe. Appends to `data/generated/ai_reviews.csv`. |
 | `01c_generate_open_models.ipynb` | Same idea for three more generators — **DeepSeek-V4-Flash**, **Gemma-4-31B-it**, **Qwen3.6-35B-A3B** — via the HuggingFace Inference Providers router (OpenAI-compatible, hosted, no GPU needed). Set `GENERATOR`, Run All, repeat. Appends to the same `data/generated/ai_reviews.csv`. |
-| `02_build_splits.ipynb` | Builds the **4 leave-one-generator-out (LOGO) rotations**. Each rotation holds one generator out entirely as the *cross-generator* test set, trains on human + the other three, and keeps a **disjoint human pool** so cross-gen evaluation isn't contaminated. Writes `data/splits/rotation_{0..3}/{train,val_indist,test_indist,test_crossgen}.csv`. |
+| `02_build_splits.ipynb` | Builds the **4 leave-one-generator-out (LOGO) rotations**. Writes `data/splits/rotation_{0..3}/{train,val_indist,test_indist,test_crossgen}.csv` + `meta.csv`. |
 
-The final dataset is ~10,000 human + ~10,000 AI reviews (2,500 from each of 4
-generators). The original proposal listed IBM Granite as the 4th generator;
-it was swapped for DeepSeek-V4-Flash because no Granite model is served through
-the HF router.
+### Dataset
+
+~10,000 human + ~10,000 AI reviews (≈2,500 from each of 4 generators). Exact
+counts drift slightly — non-English entries were dropped (≈0.3% human, ≈0.1% AI)
+and some contaminated AI generations removed — so nothing downstream assumes a
+round 2,500 or 10,000.
+
+Notes:
+- The original proposal listed **IBM Granite** as the 4th generator; it was
+  swapped for **DeepSeek-V4-Flash** because no Granite model is served through
+  the HF router.
+- Qwen3.6 and DeepSeek-V4 are reasoning models — `01c` disables thinking
+  (`chat_template_kwargs`) and strips any leftover reasoning traces so the
+  reviews are clean.
+
+### How the LOGO splits work
+
+The project measures **cross-generator robustness**: can a detector trained on
+some generators catch reviews from one it never saw? So the train→evaluate
+pipeline runs 4 times, each rotation holding out one generator.
+
+For a given rotation, the 3 *training* generators' reviews are split 80/10/10:
+
+- **`train.csv`** — 80% of the 3 in-dist generators' AI + an equal count of
+  human reviews (**1:1 balanced**).
+- **`val_indist.csv`** — 10%, for tuning / early stopping (1:1).
+- **`test_indist.csv`** — 10%, held-out AI from generators seen in training
+  (1:1). The "easy" test.
+- **`test_crossgen.csv`** — the **entire held-out generator** + a human pool.
+  The "hard" test — a generator never seen in training.
+
+The human pool is carved **after** the AI split: it takes exactly as many
+humans as the AI in-dist count (for 1:1 balancing), and whatever is left over
+becomes the cross-gen human pool. This means (a) the split builder adapts to
+any human count instead of assuming 10,000, and (b) the cross-gen humans are
+**disjoint** from training humans — so cross-gen evaluation measures
+generalization to an unseen *generator*, not memorization of human text. The
+notebook asserts no `review_id` overlap between `train` and `test_crossgen`.
 
 ### Next — modeling and evaluation (not yet built)
 
