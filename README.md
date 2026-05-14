@@ -80,14 +80,80 @@ notebook asserts no `review_id` overlap between `train` and `test_crossgen`.
 
 ### Next — modeling and evaluation (not yet built)
 
-To be written as new notebooks:
+The detector is a **DeBERTa-v3-base encoder** with up to three heads stacked on
+top. Each of the three robustness components from the proposal is a head + a
+loss term; the four model variants just toggle which are active.
 
-1. **Train all variants** — 4 rotations × 4 model variants
-   (base / + contrastive loss / + adversarial head / both) = 16 runs on a
-   DeBERTa-v3-base encoder.
-2. **Baselines** — TF-IDF + logistic regression, and DeBERTa with no
-   fine-tuning, for comparison.
-3. **Evaluate** — aggregate into the in-distribution vs cross-generator
-   comparison table (F1 and ROC-AUC), plus a per-held-out-generator breakdown.
-   The gap between the in-dist and cross-gen columns is what the method is
-   trying to close.
+#### The model (define in `03_train.ipynb`)
+
+- **Encoder** — `microsoft/deberta-v3-base`. Mean-pool (or take `[CLS]`) the
+  token embeddings into a single review vector `h`.
+- **Classification head** — `Linear(hidden, 2)` on `h`, trained with
+  cross-entropy on the human/AI `label`. This *is* the detector; the other two
+  heads only exist to shape the encoder.
+- **Contrastive projection head** — `Linear(hidden, 128)` → L2-normalize,
+  trained with **supervised contrastive loss** using the binary `label` as the
+  class. Pulls all-AI together and all-human together in embedding space
+  regardless of generator — "what AI writing looks like in general."
+- **Generator-adversarial head** — `Linear(hidden, n_sources)` predicting
+  *which source* wrote the review (the 3 training generators + `human` = 4
+  classes), fed through a **Gradient Reversal Layer (GRL)**: identity on the
+  forward pass, negates+scales the gradient on the backward pass. Minimizing
+  this head's loss therefore *maximizes* generator confusion in the encoder,
+  forcing it to drop generator-specific style cues.
+
+Total loss: `L = L_ce + λ_c · L_supcon + λ_a · L_adv`. The GRL handles the
+adversarial sign flip, so `L_adv` is just cross-entropy on the source label.
+
+The four variants = which terms are active:
+
+| variant | active loss |
+|---|---|
+| `base` | `L_ce` |
+| `contrastive` | `L_ce + λ_c·L_supcon` |
+| `adversarial` | `L_ce + λ_a·L_adv` |
+| `both` | all three |
+
+#### Training — `03_train.ipynb`
+
+- Loop over **4 rotations × 4 variants = 16 runs**; skip any `(variant,
+  rotation)` whose checkpoint already exists, so it survives Colab disconnects.
+- Per run: read `data/splits/rotation_{r}/train.csv` + `val_indist.csv`,
+  tokenize (`max_length≈384`), train with AdamW (encoder lr ≈ 2e-5), ~3 epochs,
+  batch ≈ 16 on a T4. Select the best epoch on `val_indist` F1; save to
+  `checkpoints/{variant}/rotation_{r}/best.pt` (gitignored, persists on Drive).
+- Put hyperparameters in a config cell: `lr`, `epochs`, `batch_size`,
+  `max_length`, `λ_c`, `λ_a`, `proj_dim`. Ramp the GRL `λ_a` from 0 upward over
+  training (DANN-style) — adversarial training is unstable at full strength
+  from step 0.
+- ~30–45 min/run on a T4 → ~10 hrs total; split across sessions.
+
+#### Baselines — `04_evaluate.ipynb`
+
+- **TF-IDF + Logistic Regression** — fit TF-IDF on `train.csv` text, LogReg on
+  top, per rotation.
+- **DeBERTa, no fine-tuning** — freeze the encoder, train *only* a linear
+  classifier on the pooled features (a linear probe). Shows what fine-tuning
+  buys over raw DeBERTa features.
+
+#### Evaluation — `04_evaluate.ipynb`
+
+- For every checkpoint, score `test_indist` and `test_crossgen` with **F1
+  (positive class = AI)** and **ROC-AUC**.
+- Average each metric across the 4 rotations.
+- Build the proposal's comparison table: rows = the 6 models (2 baselines + 4
+  variants), columns = in-dist vs cross-gen F1/AUC.
+- Add a **per-held-out-generator breakdown** (cross-gen F1 for each held-out
+  generator) — shows which generators are hardest to catch unseen.
+- Headline number = the **in-dist minus cross-gen gap**; the contrastive +
+  adversarial components should shrink it.
+
+#### Implementation notes
+
+- DeBERTa-v3 needs `sentencepiece` installed for its tokenizer.
+- Supervised contrastive loss needs ≥2 examples per class per batch — batches
+  mix human+AI so that holds; just don't drop to a tiny batch size.
+- Adversarial source labels come from the `generator` column (`human` + the 3
+  training generators). Build the label map **per rotation**, since the
+  held-out generator isn't present in training.
+- Set seeds (torch / numpy / python) per run so the 16 runs are reproducible.
