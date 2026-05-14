@@ -5,14 +5,9 @@ venv/
 .env
 .ipynb_checkpoints/
 
-data/raw/
-data/generated/
-data/splits/
+# Training artifacts (large, regenerated). Data CSVs ARE tracked in git.
 checkpoints/
 runs/
 wandb/
-*.parquet
-*.csv
-!data/.gitkeep
 
 .DS_Store
