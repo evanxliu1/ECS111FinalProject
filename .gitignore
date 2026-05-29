@@ -9,5 +9,8 @@ venv/
 checkpoints/
 runs/
 wandb/
+_smoke/
+_smoke_fp32/
+_t/
 
 .DS_Store
