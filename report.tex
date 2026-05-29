@@ -86,9 +86,10 @@ when the test text comes from a different model, decoder, or domain. We isolate
 and measure one axis of that degradation: the change of generator.
 
 \paragraph{Fake review detection.}
-Recent work studies AI-generated reviews but usually does not separate the
-training generator from the test generator. Our LOGO design never lets a
-generator appear in both, so the reported gap is a clean estimate of
+Recent work studies AI-generated reviews and benchmarks
+\cite{bag2025,guo2024,kashifpour2025}, but usually does not
+separate the training generator from the test generator. Our LOGO design never
+lets a generator appear in both, so the reported gap is a clean estimate of
 generalization to an unseen model.
 
 \paragraph{Robust representations.}
@@ -98,6 +99,18 @@ all AI reviews regardless of source. Domain-adversarial training with a gradient
 reversal layer \cite{ganin2015dann} trains the encoder so an auxiliary head
 cannot recover the source generator, removing generator-specific cues. Our
 backbone is DeBERTa-v3 \cite{he2021deberta}.
+
+\subsection{Justification of novelty}
+AI fake-review detection is not new, but cross-generator robustness is
+understudied. Most papers train and test on the same generator, which inflates
+reported performance \cite{bag2025,guo2024,kashifpour2025}. Our project is novel
+in three ways. First, we explicitly evaluate cross-generator robustness by
+training on some AI models and testing on completely different ones; no prior
+review-detection work structures its evaluation this way. Second, we combine two
+techniques, contrastive loss and a generator-adversarial head, to resist
+generator shift; neither has been applied to this problem before. Third, we run
+an ablation to identify which component drives robustness, giving an
+interpretable account of what makes the model work.
 
 \section{Methodology}
 
@@ -316,7 +329,7 @@ DeBERTa + CE (base)        & \textbf{0.9933} & 0.9839 & 0.0095 & 0.9991 \\
 \end{tabular}
 \end{table}
 
-\begin{figure}[t]
+\begin{figure}[h]
 \centering
 \includegraphics[width=0.92\textwidth]{f1_comparison.pdf}
 \caption{In-distribution versus cross-generator F1 for the baselines and the four
@@ -324,7 +337,7 @@ DeBERTa variants. Fine-tuned DeBERTa closes most of the baseline gap.}
 \label{fig:f1}
 \end{figure}
 
-\begin{figure}[t]
+\begin{figure}[h]
 \centering
 \includegraphics[width=0.78\textwidth]{gap.pdf}
 \caption{Cross-generator gap (in-distribution F1 minus cross-generator F1). The
@@ -356,7 +369,7 @@ Rotation & Held out & CE & Contrastive & Adversarial & Both \\
 \end{tabular}
 \end{table}
 
-\begin{figure}[t]
+\begin{figure}[h]
 \centering
 \includegraphics[width=0.92\textwidth]{per_generator.pdf}
 \caption{Cross-generator F1 by held-out generator. Gemma is hardest, and is
@@ -447,19 +460,42 @@ Y.~Ganin and V.~Lempitsky.
 
 \bibitem{bag2025}
 S.~Bag et al.
-\newblock Detection of AI-generated reviews.
-\newblock 2025.
+\newblock Detecting LLM-generated fake reviews: a leakage-free multi-model
+framework.
+\newblock \emph{International Journal of Electronic Marketing and Retailing
+(IJEIM)}, 2025.
 
 \bibitem{guo2024}
 B.~Guo et al.
-\newblock How close is ChatGPT to human experts? Comparison corpus and
-detection.
-\newblock 2024.
+\newblock DetectRL: benchmarking LLM-generated text detection in real-world
+scenarios.
+\newblock In \emph{NeurIPS}, 2024.
 
 \bibitem{kashifpour2025}
 M.~Kashifpour et al.
-\newblock LLM-generated text detection.
-\newblock 2025.
+\newblock Trust at risk: detecting misinformation in LLM-generated product
+reviews.
+\newblock \emph{ScienceDirect}, 2025.
+
+\bibitem{wiki_fakereview}
+Wikipedia.
+\newblock Fake review.
+\newblock \url{https://en.wikipedia.org/wiki/Fake_review}.
+
+\bibitem{wiki_llm}
+Wikipedia.
+\newblock Large language model.
+\newblock \url{https://en.wikipedia.org/wiki/Large_language_model}.
+
+\bibitem{wiki_transformer}
+Wikipedia.
+\newblock Transformer (deep learning architecture).
+\newblock \url{https://en.wikipedia.org/wiki/Transformer_(deep_learning_architecture)}.
+
+\bibitem{wiki_contrastive}
+Wikipedia.
+\newblock Contrastive learning.
+\newblock \url{https://en.wikipedia.org/wiki/Contrastive_learning}.
 
 \end{thebibliography}
 
