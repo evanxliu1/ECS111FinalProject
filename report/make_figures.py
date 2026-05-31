@@ -9,9 +9,11 @@ import os
 
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 
 OUT = os.path.join(os.path.dirname(__file__), "figures")
 os.makedirs(OUT, exist_ok=True)
+ROOT = os.path.dirname(os.path.dirname(__file__))
 
 # (model label, in-dist F1, cross-gen F1, cross-gen AUC)
 MODELS = [
@@ -86,6 +88,35 @@ ax.grid(axis="y", alpha=0.3)
 ax.set_title("Cross-generator F1 by held-out generator")
 fig.tight_layout()
 fig.savefig(os.path.join(OUT, "per_generator.pdf"))
+plt.close(fig)
+
+# ---- Figure 4: word-count distributions, human vs generators ----
+def word_counts(texts):
+    return np.array([len(str(t).split()) for t in texts])
+
+human = pd.read_csv(os.path.join(ROOT, "data", "raw", "human_reviews.csv"))
+ai = pd.read_csv(os.path.join(ROOT, "data", "generated", "ai_reviews.csv"))
+groups = [("Human", word_counts(human["text"]), "#444444")]
+gpal = {"gpt5mini": "#4C72B0", "deepseek": "#DD8452",
+        "gemma": "#55A868", "qwen": "#8172B3"}
+for g, c in gpal.items():
+    groups.append((g, word_counts(ai[ai["generator"] == g]["text"]), c))
+
+bins = np.linspace(0, 200, 41)
+fig, ax = plt.subplots(figsize=(7.6, 3.8))
+for name, wc, color in groups:
+    style = "-" if name == "Human" else "--"
+    lw = 2.2 if name == "Human" else 1.3
+    ax.hist(wc, bins=bins, density=True, histtype="step",
+            color=color, lw=lw, ls=style, label=f"{name} (mean {wc.mean():.1f})")
+ax.set_xlabel("Review length (words)")
+ax.set_ylabel("Density")
+ax.set_xlim(0, 200)
+ax.legend(fontsize=8)
+ax.grid(axis="y", alpha=0.3)
+ax.set_title("Review length distribution: human vs each generator")
+fig.tight_layout()
+fig.savefig(os.path.join(OUT, "wordcounts.pdf"))
 plt.close(fig)
 
 print("wrote figures to", OUT)
