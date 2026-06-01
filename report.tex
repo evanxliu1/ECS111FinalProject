@@ -2,6 +2,7 @@
 
 \usepackage[margin=1in]{geometry}
 \usepackage{graphicx}
+\usepackage{float}
 \usepackage{booktabs}
 \usepackage{amsmath}
 \usepackage{amssymb}
@@ -51,6 +52,11 @@ The contrastive objective is best overall: it raises cross-generator F1 to
 0.9875 and halves the gap from 0.0095 to 0.0048. The adversarial objective gives
 the smallest gap (0.0015) but lowers accuracy.
 \end{abstract}
+
+\noindent\textbf{Keywords:} AI-generated text detection, fake review detection,
+cross-generator generalization, DeBERTa, supervised contrastive learning,
+domain-adversarial training, leave-one-generator-out evaluation.
+\vspace{0.5em}
 
 \section{Introduction}
 
@@ -161,7 +167,7 @@ exploiting length. We sample with \texttt{temperature}\,$=1.0$,
 mean word counts (59.9 to 68.6) track the human mean of 60.6, so length gives
 the detector little signal.
 
-\begin{figure}[h]
+\begin{figure}[H]
 \centering
 \includegraphics[width=0.82\textwidth]{wordcounts.pdf}
 \caption{Review length distribution for human reviews and each generator. The
@@ -339,7 +345,7 @@ DeBERTa + CE (base)        & \textbf{0.9933} & 0.9839 & 0.0095 & 0.9991 \\
 \end{tabular}
 \end{table}
 
-\begin{figure}[h]
+\begin{figure}[H]
 \centering
 \includegraphics[width=0.92\textwidth]{f1_comparison.pdf}
 \caption{In-distribution versus cross-generator F1 for the baselines and the four
@@ -347,7 +353,7 @@ DeBERTa variants. Fine-tuned DeBERTa closes most of the baseline gap.}
 \label{fig:f1}
 \end{figure}
 
-\begin{figure}[h]
+\begin{figure}[H]
 \centering
 \includegraphics[width=0.78\textwidth]{gap.pdf}
 \caption{Cross-generator gap (in-distribution F1 minus cross-generator F1). The
@@ -382,7 +388,7 @@ Rotation & Held out & CE & Contrastive & Adversarial & Both \\
 \end{tabular}
 \end{table}
 
-\begin{figure}[h]
+\begin{figure}[H]
 \centering
 \includegraphics[width=0.92\textwidth]{per_generator.pdf}
 \caption{Cross-generator F1 by held-out generator. Gemma is hardest, and is
