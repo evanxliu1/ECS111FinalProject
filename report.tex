@@ -274,6 +274,16 @@ with a logistic-regression probe, each run per rotation. All variants use the
 configuration in Table~\ref{tab:hparams}, select the best epoch on
 \texttt{val\_indist} F1, and fix seeds at 42.
 
+Rather than grid-search the hyperparameters, we set them to standard transformer
+fine-tuning defaults (learning rate 2e-5, three epochs, effective batch size 16).
+The only data-driven selection is early stopping: we keep the epoch with the
+highest \texttt{val\_indist} F1, so the test splits never influence training. The
+adversarial weight $\lambda_a$ follows a DANN-style ramp from 0 to 1 for
+stability, and the decision threshold is fixed at 0.5. The loss weights
+$\lambda_c$ and $\lambda_a$ are both fixed at 0.5 rather than tuned. The
+baselines likewise use library defaults: TF-IDF over unigrams and bigrams with a
+10k-feature vocabulary, and logistic regression with the \texttt{lbfgs} solver.
+
 \begin{table}[t]
 \centering
 \caption{Training configuration, shared across all variants and rotations.}
@@ -431,8 +441,11 @@ GPT-5 / DeepSeek / Gemma / Qwen family. The corpus is English-only. Three of fou
 generators are reasoning models, and subtle reasoning artifacts could remain as a
 shortcut. A single fixed prompt was used, so this measures non-adversarial
 generation. Each cross-generator human pool is modest (about 2{,}470), adding
-sampling noise. Finally, the differences between variants are small relative to
-the rotation-to-rotation spread, and we ran a single seed, so these results are
+sampling noise. We also did not grid-search the loss weights $\lambda_c$ and $\lambda_a$ (both
+fixed at 0.5), which likely explains why the combined variant did not beat
+contrastive alone; a joint sweep of the two weights is natural future work.
+Finally, the differences between variants are small relative to the
+rotation-to-rotation spread, and we ran a single seed, so these results are
 suggestive rather than definitive.
 
 \section{Conclusion}
@@ -446,8 +459,9 @@ objective is the best variant: highest cross-generator F1 (0.9875) and AUC
 adversarial objective shrinks the gap further (0.0015) but only by lowering
 in-distribution accuracy, so the gap must be read alongside absolute error. Gemma
 is the hardest generator to catch unseen, and is where the robustness objectives
-help most. Future work should test genuinely held-out model families,
-prompt-tuned adversarial generation, and non-English reviews.
+help most. Future work should jointly sweep the loss weights $\lambda_c$ and $\lambda_a$
+and run multiple seeds to confirm the margins, and test genuinely held-out model
+families, prompt-tuned adversarial generation, and non-English reviews.
 
 \section*{Contribution Statement}
 
