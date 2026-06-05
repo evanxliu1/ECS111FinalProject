@@ -211,8 +211,10 @@ each generator we sample the same 2{,}500
 products from the human pool, so every generator describes the same set. A fixed
 prompt template supplies the product title, category, rating, and a target word
 count drawn from the human length distribution; this prevents a detector from
-exploiting length. We sample with \texttt{temperature}\,$=1.0$,
-\texttt{top\_p}\,$=0.95$. As Figure~\ref{fig:wordcounts} shows, per-generator
+exploiting length. The three open-weight models sample with
+\texttt{temperature}\,$=1.0$ and \texttt{top\_p}\,$=0.95$; GPT-5 mini omits
+temperature (which it does not support) and runs at minimal reasoning effort. As
+Figure~\ref{fig:wordcounts} shows, per-generator
 mean word counts (59.9 to 68.6) track the human mean of 60.6, so length gives
 the detector little signal.
 
@@ -320,9 +322,11 @@ Variant & Active loss \\
 
 \subsection{Baselines and training}
 We compare against TF-IDF with logistic regression and a frozen DeBERTa encoder
-with a logistic-regression probe, each run per rotation. All variants use the
+with a logistic-regression probe on its pooled \texttt{[CLS]} vector (the
+fine-tuned model instead mean-pools), each run per rotation. All variants use the
 configuration in Table~\ref{tab:hparams}, select the best epoch on
-\texttt{val\_indist} F1, and fix seeds at 42.
+\texttt{val\_indist} F1, and fix seeds at 42. Training the four variants across
+the four rotations gives 16 runs in total.
 
 Rather than grid-search the hyperparameters, we set them to standard transformer
 fine-tuning defaults (learning rate 2e-5, three epochs, effective batch size 16).
@@ -332,7 +336,8 @@ adversarial weight $\lambda_a$ follows a DANN-style ramp from 0 to 1 for
 stability, and the decision threshold is fixed at 0.5. The loss weights
 $\lambda_c$ and $\lambda_a$ are both fixed at 0.5 rather than tuned. The
 baselines likewise use library defaults: TF-IDF over unigrams and bigrams with a
-10k-feature vocabulary, and logistic regression with the \texttt{lbfgs} solver.
+10k-feature vocabulary and sublinear term-frequency scaling, and logistic
+regression with the \texttt{lbfgs} solver.
 
 \begin{table}[t]
 \centering
@@ -521,6 +526,21 @@ help most. Future work should jointly sweep the loss weights $\lambda_c$ and
 $\lambda_a$ and run multiple seeds to confirm the margins, and test genuinely
 held-out model families, prompt-tuned adversarial generation, and non-English
 reviews.
+
+\section*{Ethics and Broader Impact}
+Reliable detection of AI-generated reviews can protect consumers and platforms
+from fraudulent content, which is the motivation for this work. The same
+capability carries risks. Any deployed detector will produce false positives that
+could wrongly flag genuine human reviews, so detector scores should inform human
+moderation rather than automatically remove content. Our evaluation is
+English-only and uses a fixed, non-adversarial generation setup, so the reported
+accuracy may not transfer to other languages or to adversaries who tune prompts
+to evade detection, and applying it as-is could disadvantage some writers.
+Because detectors and generators co-evolve, results from any fixed set of models
+should be read as a snapshot rather than a lasting guarantee. We used only
+publicly available review data and model APIs under their terms, and introduced
+no personally identifying information beyond what the source dataset already
+contains.
 
 \section*{Contribution Statement}
 Evan Liu collected human reviews and generated AI reviews. Jonathan Tran
