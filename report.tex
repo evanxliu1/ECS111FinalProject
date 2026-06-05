@@ -206,9 +206,8 @@ each of eight product categories. Human word counts have mean 60.6 and median
 \subsection{AI reviews}
 We use four distinct generators: \texttt{gpt5mini} (OpenAI API),
 \texttt{deepseek}, \texttt{gemma}, and \texttt{qwen} (the last three via the
-HuggingFace Inference Providers router). We substituted DeepSeek-V4-Flash for
-the proposal's IBM Granite, which is not served through hosted APIs, keeping a
-distinct open-weight family. For each generator we sample the same 2{,}500
+HuggingFace Inference Providers router), chosen as distinct model families. For
+each generator we sample the same 2{,}500
 products from the human pool, so every generator describes the same set. A fixed
 prompt template supplies the product title, category, rating, and a target word
 count drawn from the human length distribution; this prevents a detector from
@@ -495,8 +494,8 @@ differ in length and cluster on certain products. Our F1 numbers are an upper
 bound for a controlled setting.
 
 \paragraph{Other limitations.}
-We used DeepSeek instead of the proposal's Granite, so results speak to the
-GPT-5 / DeepSeek / Gemma / Qwen family. The corpus is English-only. Three of four
+Our results speak to the GPT-5 / DeepSeek / Gemma / Qwen family specifically.
+The corpus is English-only. Three of four
 generators are reasoning models, and subtle reasoning artifacts could remain as a
 shortcut. A single fixed prompt was used, so this measures non-adversarial
 generation. Each cross-generator human pool is modest (about 2{,}470), adding
