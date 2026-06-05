@@ -1,62 +1,112 @@
-\documentclass[11pt]{article}
+%% ACM acmart format (see https://www.acm.org/publications/authors/submissions).
+%% Single-column ACM format (matches the provided manuscript sample and fits our
+%% wide tables better). For the two-column proceedings look instead, swap for:
+%%   \documentclass[sigconf,nonacm]{acmart}
+\documentclass[manuscript,nonacm]{acmart}
 
-\usepackage[margin=1in]{geometry}
-\usepackage{graphicx}
-\usepackage{float}
-\usepackage{booktabs}
-\usepackage{amsmath}
-\usepackage{amssymb}
-\usepackage{url}
-\usepackage[dvipsnames]{xcolor}
-\usepackage{hyperref}
-\usepackage{multirow}
-\usepackage{array}
-\usepackage{caption}
-\usepackage{authblk}
+%% Class-report cleanups: drop the ACM reference-format block and the
+%% copyright-permission footer that are only needed for real ACM publication.
+\settopmatter{printacmref=false}
+\renewcommand\footnotetextcopyrightpermission[1]{}
+\pagestyle{plain}
 
 \graphicspath{{report/figures/}{figures/}}
 
-\hypersetup{
-  colorlinks=true,
-  linkcolor=blue!50!black,
-  citecolor=blue!50!black,
-  urlcolor=blue!50!black
-}
-
-\title{Cross-Generator Detection of AI-Generated Product Reviews:\\
-A Leave-One-Generator-Out Study with Contrastive and\\
-Adversarial Robustness Objectives}
-
-\author{Evan Liu, Jonathan Tran, Sol Abrian, Matthew Wang}
-\date{ECS 111 Final Project \\ Spring 2026}
-
 \begin{document}
 
-\maketitle
+\title[Cross-Generator Detection of AI-Generated Product Reviews]{Cross-Generator
+Detection of AI-Generated Product Reviews: A Leave-One-Generator-Out Study with
+Contrastive and Adversarial Robustness Objectives}
+
+%% Shared affiliation; UC Davis emails.
+\author{Evan Liu}
+\email{naoliu@ucdavis.edu}
+\affiliation{%
+  \institution{University of California, Davis}
+  \city{Davis}
+  \state{California}
+  \country{USA}}
+
+\author{Jonathan Tran}
+\email{jihtran@ucdavis.edu}
+\affiliation{%
+  \institution{University of California, Davis}
+  \city{Davis}
+  \state{California}
+  \country{USA}}
+
+\author{Sol Abrian}
+\email{sjabrian@ucdavis.edu}
+\affiliation{%
+  \institution{University of California, Davis}
+  \city{Davis}
+  \state{California}
+  \country{USA}}
+
+\author{Matthew Wang}
+\email{mdmwang@ucdavis.edu}
+\affiliation{%
+  \institution{University of California, Davis}
+  \city{Davis}
+  \state{California}
+  \country{USA}}
+
+\renewcommand{\shortauthors}{Liu et al.}
 
 \begin{abstract}
-A detector for AI-written reviews is only useful if it works on text from
-models it never trained on. Most prior work trains and tests on the same
-generator, which overstates real performance. We instead measure the
-\emph{cross-generator gap}: the drop in detection F1 on a generator held out of
-training. We build a balanced corpus of about 20{,}000 Amazon reviews, pairing
-roughly 10{,}000 confidently human reviews (written before ChatGPT) with about
-10{,}000 AI reviews from four generators (GPT-5 mini, DeepSeek-V4-Flash,
-Gemma-4-31B-it, Qwen3.6-35B-A3B). All AI reviews cover the same products with
-human-like lengths, so the test isolates writing style. Using a
-leave-one-generator-out protocol over four rotations, we train a DeBERTa-v3
-detector with optional supervised-contrastive and gradient-reversal adversarial
-heads, and compare against TF-IDF and frozen-DeBERTa baselines. Fine-tuned
-DeBERTa generalizes well (cross-generator F1 0.9839 versus 0.9558 for TF-IDF).
-The contrastive objective is best overall: it raises cross-generator F1 to
-0.9875 and halves the gap from 0.0095 to 0.0048. The adversarial objective gives
-the smallest gap (0.0015) but lowers accuracy.
+A detector for AI-written reviews is only useful if it works on text from models
+it never trained on. Most prior work trains and tests on the same generator,
+which overstates real performance. We instead measure the \emph{cross-generator
+gap}: the drop in detection F1 on a generator held out of training. We build a
+balanced corpus of about 20{,}000 Amazon reviews, pairing roughly 10{,}000
+confidently human reviews (written before ChatGPT) with about 10{,}000 AI
+reviews from four generators (GPT-5 mini, DeepSeek-V4-Flash, Gemma-4-31B-it,
+Qwen3.6-35B-A3B). All AI reviews cover the same products with human-like lengths,
+so the test isolates writing style. Using a leave-one-generator-out protocol over
+four rotations, we train a DeBERTa-v3 detector with optional
+supervised-contrastive and gradient-reversal adversarial heads, and compare
+against TF-IDF and frozen-DeBERTa baselines. Fine-tuned DeBERTa generalizes well
+(cross-generator F1 0.9839 versus 0.9558 for TF-IDF). The contrastive objective
+is best overall: it raises cross-generator F1 to 0.9875 and halves the gap from
+0.0095 to 0.0048. The adversarial objective gives the smallest gap (0.0015) but
+lowers accuracy.
 \end{abstract}
 
-\noindent\textbf{Keywords:} AI-generated text detection, fake review detection,
-cross-generator generalization, DeBERTa, supervised contrastive learning,
-domain-adversarial training, leave-one-generator-out evaluation.
-\vspace{0.5em}
+\begin{CCSXML}
+<ccs2012>
+ <concept>
+  <concept_id>10010147.10010178.10010179.10010182</concept_id>
+  <concept_desc>Computing methodologies~Natural language processing</concept_desc>
+  <concept_significance>500</concept_significance>
+ </concept>
+ <concept>
+  <concept_id>10010147.10010257.10010258.10010259</concept_id>
+  <concept_desc>Computing methodologies~Supervised learning by classification</concept_desc>
+  <concept_significance>300</concept_significance>
+ </concept>
+ <concept>
+  <concept_id>10010147.10010257.10010258.10010261</concept_id>
+  <concept_desc>Computing methodologies~Neural networks</concept_desc>
+  <concept_significance>300</concept_significance>
+ </concept>
+ <concept>
+  <concept_id>10002951.10003317.10003347.10003352</concept_id>
+  <concept_desc>Information systems~Spam detection</concept_desc>
+  <concept_significance>100</concept_significance>
+ </concept>
+</ccs2012>
+\end{CCSXML}
+
+\ccsdesc[500]{Computing methodologies~Natural language processing}
+\ccsdesc[300]{Computing methodologies~Supervised learning by classification}
+\ccsdesc[300]{Computing methodologies~Neural networks}
+\ccsdesc[100]{Information systems~Spam detection}
+
+\keywords{AI-generated text detection, fake review detection, cross-generator
+generalization, DeBERTa, supervised contrastive learning, domain-adversarial
+training, leave-one-generator-out evaluation}
+
+\maketitle
 
 \section{Introduction}
 
@@ -93,10 +143,10 @@ and measure one axis of that degradation: the change of generator.
 
 \paragraph{Fake review detection.}
 Recent work studies AI-generated reviews and benchmarks
-\cite{bag2025,guo2024,kashifpour2025}, but usually does not
-separate the training generator from the test generator. Our LOGO design never
-lets a generator appear in both, so the reported gap is a clean estimate of
-generalization to an unseen model.
+\cite{bag2025,guo2024,kashifpour2025}, but usually does not separate the training
+generator from the test generator. Our LOGO design never lets a generator appear
+in both, so the reported gap is a clean estimate of generalization to an unseen
+model.
 
 \paragraph{Robust representations.}
 Two ideas motivate our variants. Supervised contrastive learning
@@ -167,12 +217,14 @@ exploiting length. We sample with \texttt{temperature}\,$=1.0$,
 mean word counts (59.9 to 68.6) track the human mean of 60.6, so length gives
 the detector little signal.
 
-\begin{figure}[H]
+\begin{figure}[t]
 \centering
-\includegraphics[width=0.82\textwidth]{wordcounts.pdf}
+\includegraphics[width=\linewidth]{wordcounts.pdf}
 \caption{Review length distribution for human reviews and each generator. The
 generator distributions track the human one by construction, so the detector
 cannot rely on length.}
+\Description{Overlaid histograms of review word counts for human reviews and the
+four AI generators, all peaking near the same short lengths.}
 \label{fig:wordcounts}
 \end{figure}
 
@@ -219,7 +271,6 @@ asserts no \texttt{review\_id} overlap. Table~\ref{tab:splits} gives the sizes.
 \centering
 \caption{Split sizes per rotation. In-distribution splits are exactly 1:1.}
 \label{tab:splits}
-\small
 \begin{tabular}{lcccc}
 \toprule
 Rotation & train & val\_indist & test\_indist & test\_crossgen (AI + human) \\
@@ -294,10 +345,11 @@ Setting & Value \\
 \midrule
 Learning rate       & 2e-5 \\
 Epochs              & 3 \\
-Batch size          & 4 (effective 16 with gradient accumulation 4) \\
+Batch size          & 4 (effective 16, accum. 4) \\
 Max sequence length & 256 \\
 Precision           & float32 (avoids NaNs on 4060) \\
-Optimizer           & AdamW, weight decay 0.01, 100 warmup steps \\
+Optimizer           & AdamW, weight decay 0.01 \\
+Warmup              & 100 steps \\
 Seed                & 42 \\
 \bottomrule
 \end{tabular}
@@ -355,19 +407,23 @@ DeBERTa + CE (base)        & \textbf{0.9933} & 0.9839 & 0.0095 & 0.9991 \\
 \end{tabular}
 \end{table}
 
-\begin{figure}[H]
+\begin{figure}[t]
 \centering
-\includegraphics[width=0.92\textwidth]{f1_comparison.pdf}
+\includegraphics[width=\linewidth]{f1_comparison.pdf}
 \caption{In-distribution versus cross-generator F1 for the baselines and the four
 DeBERTa variants. Fine-tuned DeBERTa closes most of the baseline gap.}
+\Description{Grouped bar chart of in-distribution and cross-generator F1 for six
+models; fine-tuned DeBERTa variants score highest on both.}
 \label{fig:f1}
 \end{figure}
 
-\begin{figure}[H]
+\begin{figure}[t]
 \centering
-\includegraphics[width=0.78\textwidth]{gap.pdf}
+\includegraphics[width=\linewidth]{gap.pdf}
 \caption{Cross-generator gap (in-distribution F1 minus cross-generator F1). The
 contrastive and adversarial objectives both shrink it.}
+\Description{Bar chart of the generalization gap per model; adversarial and
+contrastive variants have the smallest gaps.}
 \label{fig:gap}
 \end{figure}
 
@@ -398,11 +454,14 @@ Rotation & Held out & CE & Contrastive & Adversarial & Both \\
 \end{tabular}
 \end{table}
 
-\begin{figure}[H]
+\begin{figure}[t]
 \centering
-\includegraphics[width=0.92\textwidth]{per_generator.pdf}
-\caption{Cross-generator F1 by held-out generator. Gemma is hardest, and is
-where the contrastive and adversarial objectives help most.}
+\includegraphics[width=\linewidth]{per_generator.pdf}
+\caption{Cross-generator F1 by held-out generator for the four DeBERTa variants.
+Gemma is hardest, and is where the contrastive and adversarial objectives help
+most.}
+\Description{Grouped bar chart of cross-generator F1 for the four variants across
+the four held-out generators; Gemma has the lowest scores.}
 \label{fig:pergen}
 \end{figure}
 
@@ -441,10 +500,10 @@ GPT-5 / DeepSeek / Gemma / Qwen family. The corpus is English-only. Three of fou
 generators are reasoning models, and subtle reasoning artifacts could remain as a
 shortcut. A single fixed prompt was used, so this measures non-adversarial
 generation. Each cross-generator human pool is modest (about 2{,}470), adding
-sampling noise. We also did not grid-search the loss weights $\lambda_c$ and $\lambda_a$ (both
-fixed at 0.5), which likely explains why the combined variant did not beat
-contrastive alone; a joint sweep of the two weights is natural future work.
-Finally, the differences between variants are small relative to the
+sampling noise. We also did not grid-search the loss weights $\lambda_c$ and
+$\lambda_a$ (both fixed at 0.5), which likely explains why the combined variant
+did not beat contrastive alone; a joint sweep of the two weights is natural
+future work. Finally, the differences between variants are small relative to the
 rotation-to-rotation spread, and we ran a single seed, so these results are
 suggestive rather than definitive.
 
@@ -459,86 +518,24 @@ objective is the best variant: highest cross-generator F1 (0.9875) and AUC
 adversarial objective shrinks the gap further (0.0015) but only by lowering
 in-distribution accuracy, so the gap must be read alongside absolute error. Gemma
 is the hardest generator to catch unseen, and is where the robustness objectives
-help most. Future work should jointly sweep the loss weights $\lambda_c$ and $\lambda_a$
-and run multiple seeds to confirm the margins, and test genuinely held-out model
-families, prompt-tuned adversarial generation, and non-English reviews.
+help most. Future work should jointly sweep the loss weights $\lambda_c$ and
+$\lambda_a$ and run multiple seeds to confirm the margins, and test genuinely
+held-out model families, prompt-tuned adversarial generation, and non-English
+reviews.
 
 \section*{Contribution Statement}
+Evan Liu collected human reviews and generated AI reviews. Jonathan Tran
+implemented the DeBERTa and TF-IDF + logistic regression baseline models. Sol
+Abrian implemented the contrastive and adversarial models. Matthew Wang
+researched foundational information and wrote the proposal and final report.
 
-\noindent Evan Liu: collected human reviews and generated AI reviews. \\
-Jonathan Tran: implemented the DeBERTa and TF-IDF + logistic regression baseline
-models. \\
-Sol Abrian: implemented the contrastive and adversarial models. \\
-Matthew Wang: researched foundational information and wrote the proposal and
-final report.
-
-\section*{Acknowledgements}
-
+\begin{acks}
 LLMs (Claude.ai) were used for help in researching background knowledge about
-DeBERTa, TF-IDF, Contrastive and Adversarial learning, and implementing general code.
+DeBERTa, TF-IDF, contrastive and adversarial learning, and implementing general
+code.
+\end{acks}
 
-\begin{thebibliography}{9}
-
-\bibitem{amazonreviews2023}
-McAuley Lab.
-\newblock Amazon Reviews 2023 dataset.
-\newblock \url{https://huggingface.co/datasets/McAuley-Lab/Amazon-Reviews-2023}.
-
-\bibitem{he2021deberta}
-P.~He, X.~Liu, J.~Gao, and W.~Chen.
-\newblock DeBERTaV3: Improving DeBERTa using ELECTRA-style pre-training with
-gradient-disentangled embedding sharing.
-\newblock \emph{arXiv:2111.09543}, 2021.
-
-\bibitem{khosla2020supcon}
-P.~Khosla et al.
-\newblock Supervised contrastive learning.
-\newblock In \emph{NeurIPS}, 2020.
-
-\bibitem{ganin2015dann}
-Y.~Ganin and V.~Lempitsky.
-\newblock Unsupervised domain adaptation by backpropagation.
-\newblock In \emph{ICML}, 2015.
-
-\bibitem{bag2025}
-S.~Bag et al.
-\newblock Detecting LLM-generated fake reviews: a leakage-free multi-model
-framework.
-\newblock \emph{International Journal of Electronic Marketing and Retailing
-(IJEIM)}, 2025.
-
-\bibitem{guo2024}
-B.~Guo et al.
-\newblock DetectRL: benchmarking LLM-generated text detection in real-world
-scenarios.
-\newblock In \emph{NeurIPS}, 2024.
-
-\bibitem{kashifpour2025}
-M.~Kashifpour et al.
-\newblock Trust at risk: detecting misinformation in LLM-generated product
-reviews.
-\newblock \emph{ScienceDirect}, 2025.
-
-\bibitem{wiki_fakereview}
-Wikipedia.
-\newblock Fake review.
-\newblock \url{https://en.wikipedia.org/wiki/Fake_review}.
-
-\bibitem{wiki_llm}
-Wikipedia.
-\newblock Large language model.
-\newblock \url{https://en.wikipedia.org/wiki/Large_language_model}.
-
-\bibitem{wiki_transformer}
-Wikipedia.
-\newblock Transformer (deep learning architecture).
-\newblock \url{https://en.wikipedia.org/wiki/Transformer_(deep_learning_architecture)}.
-
-\bibitem{wiki_contrastive}
-Wikipedia.
-\newblock Contrastive learning.
-\newblock \url{https://en.wikipedia.org/wiki/Contrastive_learning}.
-
-\end{thebibliography}
+\bibliographystyle{ACM-Reference-Format}
+\bibliography{references}
 
 \end{document}
