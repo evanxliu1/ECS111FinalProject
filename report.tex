@@ -4,6 +4,10 @@
 %%   \documentclass[sigconf,nonacm]{acmart}
 \documentclass[manuscript,nonacm]{acmart}
 
+%% Place tables/figures exactly where they appear in the source (at their mention)
+%% instead of letting them float to the top of a page.
+\usepackage{float}
+
 %% Class-report cleanups: drop the ACM reference-format block and the
 %% copyright-permission footer that are only needed for real ACM publication.
 \settopmatter{printacmref=false}
@@ -176,7 +180,7 @@ dataset \cite{amazonreviews2023}, restricted to text written before ChatGPT's
 release, with AI reviews we generated from four models. Table~\ref{tab:counts}
 gives the final counts.
 
-\begin{table}[t]
+\begin{table}[H]
 \centering
 \caption{Final corpus composition after cleaning.}
 \label{tab:counts}
@@ -218,7 +222,7 @@ Figure~\ref{fig:wordcounts} shows, per-generator
 mean word counts (59.9 to 68.6) track the human mean of 60.6, so length gives
 the detector little signal.
 
-\begin{figure}[t]
+\begin{figure}[H]
 \centering
 \includegraphics[width=\linewidth]{wordcounts.pdf}
 \caption{Review length distribution for human reviews and each generator. The
@@ -243,7 +247,7 @@ We use four LOGO rotations (Table~\ref{tab:rotations}). Each holds out one
 generator entirely as the cross-generator test set and trains on humans plus the
 other three.
 
-\begin{table}[t]
+\begin{table}[H]
 \centering
 \caption{The four leave-one-generator-out rotations.}
 \label{tab:rotations}
@@ -268,7 +272,7 @@ humans are disjoint from training, the cross-generator test measures
 generalization to an unseen generator, not memorized human text; the builder
 asserts no \texttt{review\_id} overlap. Table~\ref{tab:splits} gives the sizes.
 
-\begin{table}[t]
+\begin{table}[H]
 \centering
 \caption{Split sizes per rotation. In-distribution splits are exactly 1:1.}
 \label{tab:splits}
@@ -304,7 +308,7 @@ with $\lambda_c = \lambda_a = 0.5$ and $\lambda_a$ ramped from 0 over training
 for stability. The four variants toggle which terms are active
 (Table~\ref{tab:variants}).
 
-\begin{table}[t]
+\begin{table}[H]
 \centering
 \caption{The four DeBERTa variants and their active loss terms.}
 \label{tab:variants}
@@ -339,7 +343,7 @@ baselines likewise use library defaults: TF-IDF over unigrams and bigrams with a
 10k-feature vocabulary and sublinear term-frequency scaling, and logistic
 regression with the \texttt{lbfgs} solver.
 
-\begin{table}[t]
+\begin{table}[H]
 \centering
 \caption{Training configuration, shared across all variants and rotations.}
 \label{tab:hparams}
@@ -371,7 +375,7 @@ in-distribution (0.9709) but loses 1.5 F1 points cross-generator (gap 0.0151).
 The frozen-DeBERTa probe is weaker (0.9437) and less stable, with a 0.0589 gap
 when DeepSeek is held out. Both carry a clear cross-generator penalty.
 
-\begin{table}[t]
+\begin{table}[H]
 \centering
 \caption{Baseline LOGO results, averaged over four rotations.}
 \label{tab:baselines}
@@ -394,7 +398,7 @@ smallest gap (0.0015) but lowers F1, trading accuracy for invariance. Combining
 both does not beat contrastive alone. Figures~\ref{fig:f1} and~\ref{fig:gap}
 visualize this.
 
-\begin{table}[t]
+\begin{table}[H]
 \centering
 \caption{Main comparison: DeBERTa variants, averaged over four rotations. Best
 value per column in bold.}
@@ -411,7 +415,7 @@ DeBERTa + CE (base)        & \textbf{0.9933} & 0.9839 & 0.0095 & 0.9991 \\
 \end{tabular}
 \end{table}
 
-\begin{figure}[t]
+\begin{figure}[H]
 \centering
 \includegraphics[width=\linewidth]{f1_comparison.pdf}
 \caption{In-distribution versus cross-generator F1 for the baselines and the four
@@ -421,7 +425,7 @@ models; fine-tuned DeBERTa variants score highest on both.}
 \label{fig:f1}
 \end{figure}
 
-\begin{figure}[t]
+\begin{figure}[H]
 \centering
 \includegraphics[width=\linewidth]{gap.pdf}
 \caption{Cross-generator gap (in-distribution F1 minus cross-generator F1). The
@@ -437,12 +441,16 @@ by held-out generator. Gemma is the hardest to catch unseen: cross-entropy drops
 to 0.9681. Both objectives help most here, raising held-out-Gemma F1 to 0.9808
 (contrastive) and 0.9815 (adversarial). GPT-5 mini and Qwen are easiest, with
 all variants above 0.98. This is why contrastive raises the average: its largest
-gains land where the base model is weakest. One likely reason Gemma is hardest:
+gains land where the base model is weakest. The bottom rows of
+Table~\ref{tab:pergen} also show that contrastive is the most \emph{stable}
+across rotations (standard deviation 0.0053 versus 0.0110 for cross-entropy), so
+it both raises the mean and shrinks the spread on unseen generators. One likely
+reason Gemma is hardest:
 it is the only non-reasoning model, so when it is held out the detector trains
 only on reasoning models (gpt5mini, deepseek, qwen) and must generalize to a
 different style of writing.
 
-\begin{table}[t]
+\begin{table}[H]
 \centering
 \caption{Cross-generator F1 by held-out generator. Best value per row in bold.}
 \label{tab:pergen}
@@ -454,11 +462,14 @@ Rotation & Held out & CE & Contrastive & Adversarial & Both \\
 1 & deepseek & 0.9843 & \textbf{0.9861} & 0.9831 & 0.9802 \\
 2 & gemma    & 0.9681 & 0.9808 & \textbf{0.9815} & 0.9754 \\
 3 & qwen     & 0.9918 & \textbf{0.9930} & 0.9807 & 0.9926 \\
+\midrule
+\multicolumn{2}{l}{Mean} & 0.9839 & 0.9875 & 0.9832 & 0.9831 \\
+\multicolumn{2}{l}{Std}  & 0.0110 & 0.0053 & 0.0030 & 0.0073 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\begin{figure}[t]
+\begin{figure}[H]
 \centering
 \includegraphics[width=\linewidth]{per_generator.pdf}
 \caption{Cross-generator F1 by held-out generator for the four DeBERTa variants.
@@ -491,6 +502,23 @@ is not the same as a good detector, and the gap should be read together with
 absolute F1. Combining both objectives did not help, suggesting they interfere
 at these weights.
 
+\paragraph{Error analysis.}
+Because we did not retain per-example predictions for the fine-tuned models, we
+analyze the TF-IDF baseline, whose linear weights are directly interpretable. On
+the cross-generator sets its errors are strongly asymmetric: it falsely flags
+only 1.9\% of human reviews as AI but misses 6.7\% of AI reviews, so it errs
+about three times more often by letting AI through than by accusing a human, a
+reassuring profile for a moderation aid. The hardest generator matches the
+fine-tuned results: held-out Gemma is missed 10.6\% of the time versus 2.8\% for
+Qwen. The most AI-indicative n-grams are polished intensifiers (``highly
+recommend,'' ``absolutely,'' ``incredibly,'' ``perfectly,'' ``waste''), while
+the most human-indicative features include function words and, notably, HTML
+artifacts such as \texttt{<br>} tags and encoded quotation marks. Those artifacts
+are a confound: scraped human reviews retain markup that our generated AI text
+never contains, so part of the separability is formatting rather than style.
+Stripping markup before tokenization would remove this shortcut and is worth
+doing in future work.
+
 \paragraph{Limits of the controlled setting.}
 Because lengths were matched to humans and all generators wrote about the same
 products, the gap reflects style, not length or topic. That suits the scientific
@@ -508,8 +536,10 @@ sampling noise. We also did not grid-search the loss weights $\lambda_c$ and
 $\lambda_a$ (both fixed at 0.5), which likely explains why the combined variant
 did not beat contrastive alone; a joint sweep of the two weights is natural
 future work. Finally, the differences between variants are small relative to the
-rotation-to-rotation spread, and we ran a single seed, so these results are
-suggestive rather than definitive.
+rotation-to-rotation spread: the contrastive variant's 0.0037 average lead over
+cross-entropy is below cross-entropy's own across-rotation standard deviation
+(0.0110), and we ran a single seed, so the ranking is suggestive rather than
+definitive.
 
 \section{Conclusion}
 
@@ -554,6 +584,8 @@ DeBERTa, TF-IDF, contrastive and adversarial learning, and implementing general
 code.
 \end{acks}
 
+%% Listed in the references without an in-text citation.
+\nocite{vaswani2017,wiki_fakereview,wiki_llm}
 \bibliographystyle{ACM-Reference-Format}
 \bibliography{references}
 
